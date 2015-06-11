@@ -1,12 +1,6 @@
 #lang racket
 ; Luke Miles, June 2015
 
-
-(define-syntax cons!
-  (syntax-rules ()
-    ((_ x ls)
-     (set! ls (cons x ls)))))
-
 (define-syntax set-field-op!
   (syntax-rules ()
     [(_ id obj-expr op-expr expr)
@@ -16,6 +10,8 @@
 
 (define (activation-function x)
   (/ 1. (+ 1. (exp (- x)))))
+(define (inverse-activation-function x)
+  (- (log (+ 1 (/ 1 x)))))
 
 (define node%
   (class object%
@@ -30,9 +26,16 @@
            [evaluate-cache (void)]) ;*
     (add-bias)
 
+    (define/public (get-info)
+      `(node%
+        last-input ,last-input
+        last-output ,last-output
+        error ,the-error
+        in-edge-weights ,(map (λ (edge) (get-field weight edge))
+                              incoming-edges)))
+
     (define/public (add-bias)
-      (cons! (make-object edge% (new bias-node%) this)
-             incoming-edges))
+      (make-object edge% (new bias-node%) this))
 
     (define/public (evaluate input-vector)
       (if (not (void? last-output))
@@ -85,6 +88,7 @@
         (set! last-output (void))
         (for ([edge (in-list incoming-edges)])
           (send (get-field source edge) clear-evaluate-cache))))))
+
 
 (define input-node%
   (class node%
@@ -139,24 +143,22 @@
       (send output-node clear-evaluate-cache)
       (send output-node evaluate input-vector))
 
-    (define (propagate-error label)
+    (define/public (propagate-error label)
       (for ([node (in-list input-nodes)])
         (send node get-error label)))
 
-    (define (update-weights learning-rate)
+    (define/public (update-weights learning-rate)
       (for ([node (in-list input-nodes)])
         (send node update-weights learning-rate)))
 
     (define/public (train labeled-points
                           [learning-rate .9]
-                          [max-iterations 10000])
-      (do ([i 0])
-          (> i max-iterations)
-        (for ([labeled-point (in-list labeled-points)])
-            (evaluate (cdr labeled-point))
-            (propagate-error (car labeled-point))
-            (update-weights learning-rate)
-            (set! i (add1 i)))))))
+                          [max-iterations 1000])
+      (for ([__ (in-range max-iterations)]
+            [labeled-point (in-cycle (in-list labeled-points))])
+        (evaluate (cdr labeled-point))
+        (propagate-error (car labeled-point))
+        (update-weights learning-rate)))))
 
 (define (make-listf k f)
   (let M ([k k])
@@ -190,4 +192,5 @@
 
   network)
 
-(provide make-network)
+(provide node% input-node% bias-node% edge%
+         network% make-listf make-network)
