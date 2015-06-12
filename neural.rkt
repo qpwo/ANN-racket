@@ -48,7 +48,7 @@
               (let ([cur-input (send (get-field source e) evaluate input-vector)])
                 (values (cons cur-input new-input)
                         (+ weighted-sum (* (get-field weight e) cur-input)))))])
-          (set! last-input new-input)
+          (set! last-input (reverse new-input))
           (set! last-output (activation-function weighted-sum))
           (set! evaluate-cache last-output)
           last-output)))
