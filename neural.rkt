@@ -156,8 +156,8 @@
                           [max-iterations 1000])
       (for ([__ (in-range max-iterations)]
             [labeled-point (in-cycle (in-list labeled-points))])
-        (evaluate (cdr labeled-point))
-        (propagate-error (car labeled-point))
+        (evaluate (car labeled-point))
+        (propagate-error (cdr labeled-point))
         (update-weights learning-rate)))))
 
 (define (make-listf k f)
